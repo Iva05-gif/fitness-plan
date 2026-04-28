@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fitness Plan Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --surface: rgba(255,255,255,0.88);
+      --border: rgba(0,0,0,0.1);
+      --border-strong: rgba(0,0,0,0.2);
+      --text: #1a1a18;
+      --text-muted: #5a5a58;
+      --text-faint: #8a8a88;
+      --radius: 16px;
+      --radius-sm: 12px;
+    }
+    body { font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; padding: 2rem 1rem; overflow-x: hidden; }
+    .video-bg { position: fixed; inset: 0; z-index: -2; overflow: hidden; }
+    .video-bg video { width: 100%; height: 100%; object-fit: cover; }
+    .video-overlay { position: fixed; inset: 0; z-index: -1; background: rgba(0,0,0,0.5); }
+    .page { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
+    .hero { text-align: center; margin-bottom: 2rem; }
+    .hero-badge { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); border-radius: 99px; padding: 4px 14px; margin-bottom: 1rem; }
+    .hero h1 { font-size: 36px; font-weight: 700; color: #ffffff; margin-bottom: 0.6rem; line-height: 1.15; letter-spacing: -0.02em; }
+    .hero p { font-size: 15px; color: rgba(255,255,255,0.75); }
+    .form-card { background: var(--surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.5); border-radius: var(--radius); padding: 1.75rem; margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 10px; }
+    .radio-group { display: flex; gap: 8px; }
+    .radio-btn { flex: 1; }
+    .radio-btn input { display: none; }
+    .radio-btn label { display: flex; align-items: center; justify-content: center; padding: 11px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; background: rgba(255,255,255,0.6); }
+    .radio-btn input:checked + label { border-color: var(--text); background: var(--text); color: white; font-weight: 500; }
+    .radio-btn label:hover { border-color: var(--border-strong); color: var(--text); background: rgba(255,255,255,0.9); }
+    .select-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .select-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 14px; cursor: pointer; transition: all 0.15s; background: rgba(255,255,255,0.6); }
+    .select-card:hover { border-color: var(--border-strong); background: rgba(255,255,255,0.9); }
+    .select-card.active { border: 2px solid #1a1a18; background: rgba(255,255,255,0.95); }
+    .sc-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+    .sc-desc { font-size: 12px; color: var(--text-faint); }
+    .days-slider { display: flex; align-items: center; gap: 16px; }
+    .days-slider input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: var(--border); border-radius: 2px; outline: none; }
+    .days-slider input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--text); border-radius: 50%; cursor: pointer; }
+    .days-num { font-size: 28px; font-weight: 500; min-width: 36px; text-align: center; }
+    .days-unit { font-size: 12px; color: var(--text-faint); text-align: center; }
+    .age-row { display: flex; align-items: center; gap: 12px; }
+    .age-input { width: 80px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; font-weight: 500; font-family: 'DM Sans', sans-serif; background: rgba(255,255,255,0.6); color: var(--text); text-align: center; }
+    .age-input:focus { outline: none; border-color: var(--border-strong); }
+    .age-label { font-size: 14px; color: var(--text-muted); }
+    .generate-btn { width: 100%; padding: 15px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; background: #1a1a18; color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity 0.15s; margin-top: 0.75rem; }
+    .generate-btn:hover { opacity: 0.85; }
+    .result-card { display: none; background: var(--surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.5); border-radius: var(--radius); padding: 1.75rem; margin-top: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.15); opacity: 0; transform: translateY(24px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    .result-card.visible { display: block; }
+    .result-card.animated { opacity: 1; transform: translateY(0); }
+    .result-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); gap: 12px; }
+    .result-header h2 { font-size: 17px; font-weight: 500; }
+    .result-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+    .plan-day { margin-bottom: 1.5rem; }
+    .day-header { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin-bottom: 0.5rem; }
+    .day-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .exercise-list { list-style: none; }
+    .exercise-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 14px; }
+    .exercise-list li:last-child { border-bottom: none; }
+    .exercise-name { color: var(--text); }
+    .exercise-sets { color: var(--text-faint); font-size: 13px; white-space: nowrap; margin-left: 8px; }
+    .day-tip { margin-top: 0.75rem; padding: 10px 12px; background: rgba(0,0,0,0.04); border-radius: 8px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+    .rest-day { padding: 16px; background: rgba(0,0,0,0.04); border-radius: var(--radius-sm); text-align: center; font-size: 14px; color: var(--text-muted); }
+    .nutrition-tip { margin-top: 1.5rem; padding: 16px; background: rgba(0,0,0,0.04); border-radius: var(--radius-sm); border-left: 3px solid #1a1a18; }
+    .nutrition-tip h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .nutrition-tip p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .result-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+    .reset-btn { flex: 1; padding: 10px 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
+    .reset-btn:hover { border-color: var(--border-strong); color: var(--text); }
+    .print-btn { flex: 1; padding: 10px 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: #1a1a18; color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity 0.15s; }
+    .print-btn:hover { opacity: 0.85; }
+    .footer { text-align: center; margin-top: 3rem; font-size: 12px; color: rgba(255,255,255,0.4); }
+    @media print {
+      .video-bg, .video-overlay, .hero, .form-card, .result-actions, .footer { display: none !important; }
+      .result-card { display: block !important; opacity: 1 !important; transform: none !important; box-shadow: none; border: none; padding: 0; }
+      body { background: white; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="video-bg">
+  <video autoplay muted loop playsinline>
+    <source src="bg.mp4" type="video/mp4">
+  </video>
+</div>
+<div class="video-overlay"></div>
+<div class="page">
+  <div class="hero">
+    <div class="hero-badge">Fitness planer</div>
+    <h1>Izradi personaliziran<br>plan treninga</h1>
+    <p>Odgovori na par pitanja i dobij personalizirani tjedni plan treninga.</p>
+  </div>
+  <div class="form-card" id="formCard">
+    <div class="form-group">
+      <span class="form-label">Spol</span>
+      <div class="radio-group">
+        <div class="radio-btn"><input type="radio" name="spol" id="musko" value="m"><label for="musko">Muškarac</label></div>
+        <div class="radio-btn"><input type="radio" name="spol" id="zensko" value="z"><label for="zensko">Žena</label></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Dob</span>
+      <div class="age-row">
+        <input class="age-input" type="number" id="dobInput" min="18" max="60" value="25"/>
+        <span class="age-label">godina (18–60)</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Koliko puta tjedno treniraš?</span>
+      <div class="days-slider">
+        <input type="range" id="daysRange" min="2" max="6" value="3" step="1">
+        <div><div class="days-num" id="daysVal">3</div><div class="days-unit">dana</div></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Cilj</span>
+      <div class="select-grid">
+        <div class="select-card" data-group="cilj" data-value="mrsavljenje"><div class="sc-title">Mršavljenje</div><div class="sc-desc">Sagorijevanje masti</div></div>
+        <div class="select-card" data-group="cilj" data-value="misici"><div class="sc-title">Izgradnja mišića</div><div class="sc-desc">Masa i snaga</div></div>
+        <div class="select-card" data-group="cilj" data-value="forma"><div class="sc-title">Forma</div><div class="sc-desc">Održavanje stanja</div></div>
+        <div class="select-card" data-group="cilj" data-value="izdrzljivost"><div class="sc-title">Izdržljivost</div><div class="sc-desc">Kondicija i stamina</div></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Razina iskustva</span>
+      <div class="select-grid">
+        <div class="select-card" data-group="iskustvo" data-value="pocetnik"><div class="sc-title">Početnik</div><div class="sc-desc">Manje od 6 mj.</div></div>
+        <div class="select-card" data-group="iskustvo" data-value="srednji"><div class="sc-title">Srednji</div><div class="sc-desc">6 mj. – 2 god.</div></div>
+        <div class="select-card" data-group="iskustvo" data-value="napredni"><div class="sc-title">Napredni</div><div class="sc-desc">Više od 2 god.</div></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Mjesto treninga</span>
+      <div class="select-grid">
+        <div class="select-card" data-group="mjesto" data-value="teretana"><div class="sc-title">Teretana</div><div class="sc-desc">Sva oprema dostupna</div></div>
+        <div class="select-card" data-group="mjesto" data-value="park"><div class="sc-title">Park</div><div class="sc-desc">Na otvorenom</div></div>
+        <div class="select-card" data-group="mjesto" data-value="kuca"><div class="sc-title">Kod kuće</div><div class="sc-desc">Bez opreme</div></div>
+      </div>
+    </div>
+    <button class="generate-btn" onclick="generatePlan()">Generiraj moj plan →</button>
+  </div>
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <h2 id="resultTitle">Tvoj tjedni plan</h2>
+      <span class="result-tag" id="resultTag"></span>
+    </div>
+    <div id="resultContent"></div>
+    <div class="result-actions">
+      <button class="reset-btn" onclick="resetForm()">← Novi plan</button>
+      <button class="print-btn" onclick="window.print()">Spremi kao PDF ↓</button>
+    </div>
+  </div>
+  <div class="footer">Izrađeno uz pomoć Claude AI · Novi mediji i web tehnologije</div>
+</div>
+<script>
+const daysRange = document.getElementById('daysRange');
+const daysVal = document.getElementById('daysVal');
+daysRange.addEventListener('input', () => daysVal.textContent = daysRange.value);
+document.querySelectorAll('.select-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll(`.select-card[data-group="${card.dataset.group}"]`).forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+});
+
+const planovi = {
+  teretana: {
+    misici: [
+      { naziv:"Grudi i triceps", vjezbe:[{ime:"Bench press sa šipkom",seti:"4 × 6–8"},{ime:"Kosi potisak bučicama",seti:"3 × 8–10"},{ime:"Pec-dec letenje",seti:"3 × 12"},{ime:"Triceps pushdown na sajli",seti:"3 × 12"},{ime:"French press",seti:"3 × 10"}], savjet:"Fokusiraj se na sporu ekscentričnu fazu — spuštaj teret 3 sekunde."},
+      { naziv:"Leđa i biceps", vjezbe:[{ime:"Mrtvo dizanje",seti:"4 × 5"},{ime:"Veslanje sa šipkom",seti:"4 × 8"},{ime:"Lat pulldown",seti:"3 × 10"},{ime:"Biceps curl s bučicama",seti:"3 × 12"},{ime:"Hammer curl",seti:"3 × 12"}], savjet:"Drži leđa ravna kod mrtvog dizanja — kvaliteta je važnija od težine."},
+      { naziv:"Noge i ramena", vjezbe:[{ime:"Čučanj sa šipkom",seti:"4 × 6–8"},{ime:"Leg press",seti:"3 × 10"},{ime:"Romanian deadlift",seti:"3 × 10"},{ime:"Military press",seti:"3 × 8"},{ime:"Lateralno podizanje bučica",seti:"3 × 15"}], savjet:"Zagrij koljena i kukove prije čučnjeva — 10 minuta laganog cardija."},
+    ],
+    mrsavljenje: [
+      { naziv:"Cijelo tijelo + cardio", vjezbe:[{ime:"Čučanj s bučicama",seti:"4 × 15"},{ime:"Bench press",seti:"3 × 15"},{ime:"Veslanje s bučicama",seti:"3 × 15"},{ime:"Plank",seti:"3 × 45 sek"},{ime:"Trčanje na traci (HIIT)",seti:"20 min"}], savjet:"Pauze između setova drži kratke — 45–60 sekundi za veći energetski utrošak."},
+      { naziv:"Noge + core", vjezbe:[{ime:"Lunges s bučicama",seti:"4 × 12/noga"},{ime:"Leg press",seti:"3 × 20"},{ime:"Hip thrust",seti:"3 × 15"},{ime:"Bicycle crunch",seti:"3 × 20"},{ime:"Veslanje na ergometru",seti:"15 min"}], savjet:"Završi trening s 15 minuta umjerenog cardija za dodatno sagorijevanje."},
+      { naziv:"Gornji dio + cardio", vjezbe:[{ime:"Push press",seti:"4 × 12"},{ime:"Chin-up ili lat pulldown",seti:"3 × 12"},{ime:"Arnold press",seti:"3 × 12"},{ime:"Triceps dip na stroju",seti:"3 × 15"},{ime:"Eliptični trenažer",seti:"20 min"}], savjet:"Kombiniraj snagu i cardio — to je najefikasnije za sagorijevanje masti."},
+    ],
+    forma: [
+      { naziv:"Cijelo tijelo A", vjezbe:[{ime:"Čučanj sa šipkom",seti:"3 × 10"},{ime:"Bench press",seti:"3 × 10"},{ime:"Veslanje sa šipkom",seti:"3 × 10"},{ime:"Overhead press",seti:"3 × 10"},{ime:"Plank",seti:"3 × 40 sek"}], savjet:"Fokusiraj se na pravilnu tehniku i konstantnost."},
+      { naziv:"Cijelo tijelo B", vjezbe:[{ime:"Romanian deadlift",seti:"3 × 10"},{ime:"Kosi bench press",seti:"3 × 10"},{ime:"Lat pulldown",seti:"3 × 10"},{ime:"Lateralno podizanje",seti:"3 × 15"},{ime:"Leg raise",seti:"3 × 15"}], savjet:"Vodi dnevnik treninga — pratiti napredak je motivirajuće."},
+    ],
+    izdrzljivost: [
+      { naziv:"Snaga + izdržljivost", vjezbe:[{ime:"Čučanj s bučicama",seti:"4 × 20"},{ime:"Bench press laganiji",seti:"4 × 20"},{ime:"Veslanje na ergometru",seti:"10 min"},{ime:"Farmer's walk",seti:"4 × 30m"},{ime:"Battle ropes",seti:"4 × 30 sek"}], savjet:"Kratke pauze (30–45 sek) povećavaju kardiovaskularni kapacitet."},
+      { naziv:"Cardio + core", vjezbe:[{ime:"Trčanje na traci",seti:"30 min umjereno"},{ime:"Plank varijacije",seti:"4 × 45 sek"},{ime:"Mountain climbers",seti:"4 × 30 sek"},{ime:"Box jumps",seti:"3 × 10"},{ime:"Kettlebell swing",seti:"4 × 15"}], savjet:"Drži puls između 130–150 otkucaja za optimalno razvijanje izdržljivosti."},
+    ],
+  },
+  park: {
+    misici: [
+      { naziv:"Gornji dio — vučenje", vjezbe:[{ime:"Zgibovi (chin-up)",seti:"4 × max"},{ime:"Australijski zgibovi",seti:"3 × 12"},{ime:"Biceps curl s trakom",seti:"3 × 15"},{ime:"Plank",seti:"3 × 45 sek"},{ime:"Hanging knee raise",seti:"3 × 15"}], savjet:"Ako ne možeš zgib, počni s australijskim zgibovima i negativ fazom."},
+      { naziv:"Gornji dio — guranje", vjezbe:[{ime:"Sklekovi standardni",seti:"4 × max"},{ime:"Pike pushup",seti:"3 × 12"},{ime:"Dips na klupi",seti:"3 × 15"},{ime:"Diamond pushup",seti:"3 × 10"},{ime:"Triceps stretch s trakom",seti:"3 × 15"}], savjet:"Varijacije sklekova ciljaju različite mišićne grupe — mijenjaj položaj ruku."},
+      { naziv:"Noge i core", vjezbe:[{ime:"Pistol squat (ili obični čučanj)",seti:"4 × 10/noga"},{ime:"Bulgarian split squat",seti:"3 × 12/noga"},{ime:"Jumping lunges",seti:"3 × 10/noga"},{ime:"Plank sa podizanjem ruke",seti:"3 × 10/stranu"},{ime:"V-sit",seti:"3 × 20 sek"}], savjet:"Koristite klupu ili stepenicu za Bulgarian split squat."},
+    ],
+    mrsavljenje: [
+      { naziv:"HIIT na otvorenom", vjezbe:[{ime:"Trčanje (intervali 1min brzo / 1min sporo)",seti:"10 rundi"},{ime:"Burpees",seti:"4 × 10"},{ime:"Jumping jacks",seti:"4 × 30 sek"},{ime:"High knees",seti:"4 × 30 sek"},{ime:"Plank",seti:"3 × 40 sek"}], savjet:"HIIT treninzi sagorijevaju kalorije još satima nakon treninga."},
+      { naziv:"Snaga + cardio park", vjezbe:[{ime:"Zgibovi",seti:"3 × max"},{ime:"Sklekovi",seti:"3 × 20"},{ime:"Čučnjevi s poskokom",seti:"4 × 15"},{ime:"Mountain climbers",seti:"4 × 30 sek"},{ime:"Brzo hodanje / lagano trčanje",seti:"20 min"}], savjet:"Brzo hodanje uzbrdo izvrsno je za sagorijevanje bez opterećenja zglobova."},
+    ],
+    forma: [
+      { naziv:"Funkcionalni trening", vjezbe:[{ime:"Zgibovi",seti:"3 × 8"},{ime:"Sklekovi",seti:"3 × 15"},{ime:"Čučnjevi",seti:"3 × 20"},{ime:"Lunges",seti:"3 × 10/noga"},{ime:"Plank",seti:"3 × 40 sek"}], savjet:"Konstantnost je ključna — 3 treninga tjedno u parku bolje je od 6 neredovitih."},
+      { naziv:"Cardio + tonus", vjezbe:[{ime:"Lagano trčanje",seti:"20 min"},{ime:"Australijski zgibovi",seti:"3 × 12"},{ime:"Dips na klupi",seti:"3 × 15"},{ime:"Plank bočni",seti:"3 × 30 sek/stranu"},{ime:"Istezanje",seti:"10 min"}], savjet:"Završi svaki trening s istezanjem — poboljšava oporavak i fleksibilnost."},
+    ],
+    izdrzljivost: [
+      { naziv:"Cardio izdržljivost", vjezbe:[{ime:"Trčanje kontinuirano",seti:"30–40 min"},{ime:"Plank",seti:"3 × 60 sek"},{ime:"Mountain climbers",seti:"3 × 45 sek"},{ime:"Burpees",seti:"3 × 12"},{ime:"Hodanje uzbrdo",seti:"15 min"}], savjet:"Povećavaj trajanje trčanja za 5 minuta svaki tjedan."},
+      { naziv:"Snaga i izdržljivost", vjezbe:[{ime:"Zgibovi kontinuirani",seti:"5 × max"},{ime:"Sklekovi kontinuirani",seti:"5 × max"},{ime:"Čučnjevi s poskokom",seti:"4 × 20"},{ime:"Dips na klupi",seti:"4 × 15"},{ime:"Trčanje na kraju",seti:"15 min"}], savjet:"Cilj je smanjiti pauze između setova s vremenom."},
+    ],
+  },
+  kuca: {
+    misici: [
+      { naziv:"Gornji dio tijela", vjezbe:[{ime:"Sklekovi standardni",seti:"4 × max"},{ime:"Diamond sklekovi",seti:"3 × 12"},{ime:"Pike pushup",seti:"3 × 12"},{ime:"Dips između dviju stolica",seti:"3 × 15"},{ime:"Plank",seti:"3 × 45 sek"}], savjet:"Postepeno povećavaj broj ponavljanja svaki tjedan."},
+      { naziv:"Donji dio tijela", vjezbe:[{ime:"Čučanj",seti:"4 × 20"},{ime:"Lunges",seti:"3 × 15/noga"},{ime:"Glute bridge",seti:"4 × 20"},{ime:"Wall sit",seti:"3 × 45 sek"},{ime:"Calf raise",seti:"3 × 25"}], savjet:"Čučnji bez težine — fokusiraj na dubinu uz ravna leđa."},
+      { naziv:"Core i stabilnost", vjezbe:[{ime:"Plank",seti:"4 × 60 sek"},{ime:"Bočni plank",seti:"3 × 40 sek/stranu"},{ime:"Bicycle crunch",seti:"3 × 20"},{ime:"Leg raise",seti:"3 × 15"},{ime:"Superman",seti:"3 × 15"}], savjet:"Jak core štiti leđa i poboljšava performanse u svim ostalim vježbama."},
+    ],
+    mrsavljenje: [
+      { naziv:"HIIT kod kuće", vjezbe:[{ime:"Jumping jacks",seti:"4 × 45 sek"},{ime:"Burpees",seti:"4 × 10"},{ime:"High knees",seti:"4 × 30 sek"},{ime:"Čučnjevi s poskokom",seti:"4 × 15"},{ime:"Mountain climbers",seti:"4 × 30 sek"}], savjet:"Radi 20 sekundi maksimalnog napora, 10 sekundi odmora — Tabata protokol."},
+      { naziv:"Snaga + mršavljenje", vjezbe:[{ime:"Sklekovi",seti:"3 × 15"},{ime:"Čučnjevi",seti:"3 × 20"},{ime:"Glute bridge",seti:"3 × 20"},{ime:"Plank",seti:"3 × 45 sek"},{ime:"Jumping lunges",seti:"3 × 10/noga"}], savjet:"Kratke pauze (30 sek) između setova povećavaju sagorijevanje kalorija."},
+    ],
+    forma: [
+      { naziv:"Cijelo tijelo kod kuće A", vjezbe:[{ime:"Sklekovi",seti:"3 × 12"},{ime:"Čučnjevi",seti:"3 × 15"},{ime:"Glute bridge",seti:"3 × 15"},{ime:"Plank",seti:"3 × 40 sek"},{ime:"Triceps dip na stolici",seti:"3 × 12"}], savjet:"Konzistentnost je ključ — bolje 3 kratka treninga nego 1 dugi."},
+      { naziv:"Cijelo tijelo kod kuće B", vjezbe:[{ime:"Pike pushup",seti:"3 × 10"},{ime:"Lunges",seti:"3 × 12/noga"},{ime:"Superman",seti:"3 × 15"},{ime:"Bicycle crunch",seti:"3 × 15"},{ime:"Wall sit",seti:"3 × 40 sek"}], savjet:"Dodaj glazbu — dokazano povećava motivaciju i performanse."},
+    ],
+    izdrzljivost: [
+      { naziv:"Cardio kod kuće", vjezbe:[{ime:"Jumping jacks",seti:"5 min kontinuirano"},{ime:"High knees",seti:"4 × 45 sek"},{ime:"Burpees",seti:"4 × 12"},{ime:"Mountain climbers",seti:"4 × 45 sek"},{ime:"Plank",seti:"3 × 60 sek"}], savjet:"Cilj je smanjiti odmor između vježbi s tjedna na tjedan."},
+      { naziv:"Snaga + izdržljivost", vjezbe:[{ime:"Sklekovi do otkaza",seti:"5 × max"},{ime:"Čučnjevi do otkaza",seti:"5 × max"},{ime:"Jumping jacks",seti:"3 × 2 min"},{ime:"Plank",seti:"3 × 60 sek"},{ime:"Burpees",seti:"3 × 15"}], savjet:"Vodi evidenciju broja ponavljanja — natjecanje sa samim sobom je moćna motivacija."},
+    ],
+  },
+};
+
+const prehrana = {
+  mrsavljenje: "Usmjeri se na kalorijski deficit od 300–500 kcal dnevno. Jedi više proteina (1.6–2g/kg tjelesne težine), smanjiti unos prerađenih ugljikohidrata i šećera. Pij minimalno 2–3 litre vode dnevno.",
+  misici: "Jedi kalorijski suficit od 200–400 kcal iznad održavanja. Unosi 1.8–2.2g proteina po kg tjelesne težine svaki dan. Kompleksni ugljikohidrati (riža, zob, krumpir) su tvoje gorivo za trening.",
+  forma: "Fokusiraj se na uravnoteženu prehranu s dovoljno proteina (1.6g/kg). Ne preskačuj obroke i jedi raznovrsno — puno povrća, zdravih masti i cjelovitih žitarica.",
+  izdrzljivost: "Ugljikohidrati su tvoj prijatelj — oni daju energiju za duge treninge. Jedi složene ugljikohidrate 2–3 sata prije treninga i proteinske obroke za oporavak. Hidracija je ključna.",
+};
+
+const dobSavjet = (dob) => {
+  if (dob < 25) return "Mladi organizam brzo napreduje — iskoristi to, ali ne preskačuj zagrijavanje.";
+  if (dob < 35) return "Idealno doba za izgradnju snage i forme — tijelo je u punoj snazi.";
+  if (dob < 45) return "Obrati pažnju na oporavak između treninga — on postaje sve važniji s godinama.";
+  return "Prioritiziraj zagrijavanje, istezanje i oporavak. Manji intenzitet s boljom tehnikom daje odlične rezultate.";
+};
+
+function generatePlan() {
+  const spol = document.querySelector('input[name="spol"]:checked')?.value;
+  const dob = parseInt(document.getElementById('dobInput').value);
+  const dani = parseInt(document.getElementById('daysRange').value);
+  const cilj = document.querySelector('.select-card[data-group="cilj"].active')?.dataset.value;
+  const iskustvo = document.querySelector('.select-card[data-group="iskustvo"].active')?.dataset.value;
+  const mjesto = document.querySelector('.select-card[data-group="mjesto"].active')?.dataset.value;
+
+  if (!spol || !cilj || !iskustvo || !mjesto) { alert('Molimo ispuni sva polja.'); return; }
+  if (dob < 18 || dob > 60 || isNaN(dob)) { alert('Molimo unesi dob između 18 i 60 godina.'); return; }
+
+  const dostupniPlanovi = planovi[mjesto][cilj];
+  const daniTjedna = ['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'];
+  
+  // Rasporedi treninge ravnomjerno kroz tjedan
+  const trening_dani = [];
+  if (dani === 2) trening_dani.push(0, 3);
+  else if (dani === 3) trening_dani.push(0, 2, 4);
+  else if (dani === 4) trening_dani.push(0, 1, 3, 4);
+  else if (dani === 5) trening_dani.push(0, 1, 2, 4, 5);
+  else trening_dani.push(0, 1, 2, 3, 4, 5);
+
+  let html = '';
+  let treningBroj = 0;
+
+  for (let i = 0; i < 7; i++) {
+    if (trening_dani.includes(i)) {
+      const p = dostupniPlanovi[treningBroj % dostupniPlanovi.length];
+      html += `<div class="plan-day">
+        <div class="day-header">Dan ${i+1} — ${daniTjedna[i]}</div>
+        <div class="day-title">${p.naziv}</div>
+        <ul class="exercise-list">`;
+      p.vjezbe.forEach(v => {
+        html += `<li><span class="exercise-name">${v.ime}</span><span class="exercise-sets">${v.seti}</span></li>`;
+      });
+      html += `</ul><div class="day-tip">💡 ${p.savjet}</div></div>`;
+      treningBroj++;
+    } else {
+      html += `<div class="plan-day">
+        <div class="day-header">Dan ${i+1} — ${daniTjedna[i]}</div>
+        <div class="rest-day">😴 Dan odmora — aktivan oporavak, lagana šetnja ili istezanje</div>
+      </div>`;
+    }
+  }
+
+  html += `<div class="nutrition-tip"><h4>🥗 Savjet za prehranu</h4><p>${prehrana[cilj]}</p></div>`;
+  html += `<div class="nutrition-tip" style="margin-top:12px;border-left-color:#888;"><h4>👤 Savjet za tvoj profil</h4><p>${dobSavjet(dob)}</p></div>`;
+
+  const ciljNaziv = {mrsavljenje:'Mršavljenje',misici:'Izgradnja mišića',forma:'Forma',izdrzljivost:'Izdržljivost'}[cilj];
+  const mjestoNaziv = {teretana:'Teretana',park:'Park',kuca:'Kod kuće'}[mjesto];
+
+  document.getElementById('resultTitle').textContent = `Plan treninga — ${ciljNaziv}`;
+  document.getElementById('resultTag').textContent = `${dani}x tjedno · ${iskustvo} · ${mjestoNaziv}`;
+  document.getElementById('resultContent').innerHTML = html;
+
+  document.getElementById('formCard').style.display = 'none';
+  const rc = document.getElementById('resultCard');
+  rc.classList.add('visible');
+  setTimeout(() => rc.classList.add('animated'), 20);
+}
+
+function resetForm() {
+  const rc = document.getElementById('resultCard');
+  rc.classList.remove('animated');
+  setTimeout(() => rc.classList.remove('visible'), 300);
+  document.getElementById('formCard').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
